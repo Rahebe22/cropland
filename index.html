@@ -48,27 +48,41 @@
             })
         });
 
-        // Define regions and their view parameters
+        // Update the regions definition to include URLs for different years
         const regions = {
-            'Congo': { center: ol.proj.fromLonLat([15.8277, -0.2280]), zoom: 7, pmtilesUrl: "https://raw.githack.com/grace-du/crop-land-maps/main/congo.pmtiles" },
-            'Ghana': { center: ol.proj.fromLonLat([-1.0232, 7.9465]), zoom: 7, pmtilesUrl: "https://github.com/Rahebe22/cropland/blob/main/ghana/aoi10_boundarymerge.pmtiles" }
+            'Congo': {
+                center: ol.proj.fromLonLat([15.8277, -0.2280]),
+                zoom: 7,
+                pmtilesUrls: {
+                    'year_1': "https://raw.githack.com/grace-du/crop-land-maps/main/congo.pmtiles",
+                    'year_2': "https://example.com/congo/year_2.pmtiles",
+                    'year_3': "https://example.com/congo/year_3.pmtiles",
+                }
+            },
+            'Ghana': {
+                center: ol.proj.fromLonLat([-1.0232, 7.9465]),
+                zoom: 7,
+                pmtilesUrls: {
+                    'year_1': "https://github.com/Rahebe22/cropland/blob/6fe39494316f31c0c50dbb6acc31f1dfcafb38b7/ghana/aoi10_boundarymerge.pmtiles",
+                    'year_2': "https://example.com/ghana/year_2.pmtiles",
+                    'year_3': "https://example.com/ghana/year_3.pmtiles",
+                }
+            }
         };
 
-        // Function to add vector layer based on selected country and year
+        // Modify the addVectorLayer function to dynamically load the PMTiles
         function addVectorLayer(country, year) {
-            // Remove existing vector layer if any
             const existingLayer = map.getLayers().getArray().find(layer => layer.get('id') === 'vectorLayer');
             if (existingLayer) {
                 map.removeLayer(existingLayer);
             }
 
             const region = regions[country];
-            if (!region) return;
+            if (!region || !region.pmtilesUrls[year]) return;
 
-            // Add new vector layer for selected country and year
             const vectorLayer = new ol.layer.VectorTile({
                 source: new olpmtiles.PMTilesVectorSource({
-                    url: region.pmtilesUrl.replace('main', year) // Assuming the URL structure includes the year
+                    url: region.pmtilesUrls[year]
                 }),
                 style: new ol.style.Style({
                     stroke: new ol.style.Stroke({
@@ -80,15 +94,14 @@
             });
             map.addLayer(vectorLayer);
 
-            // Zoom to the selected region
             map.getView().animate({
                 center: region.center,
                 zoom: region.zoom,
-                duration: 1000 // Smooth transition animation (1 second)
+                duration: 1000
             });
         }
 
-        // Create dropdowns for selecting country, version, and year
+        // Dropdowns setup remains the same
         const countrySelect = document.createElement('select');
         countrySelect.className = 'country-button';
         Object.keys(regions).forEach(country => {
@@ -113,7 +126,7 @@
         document.getElementById('map').appendChild(countrySelect);
         document.getElementById('map').appendChild(yearSelect);
 
-        // Initially load Congo vector layer
+        // Initially load Congo vector layer for year_1
         addVectorLayer('Congo', 'year_1');
     </script>
 </body>
