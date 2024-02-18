@@ -11,8 +11,9 @@
             height: 100vh;
             margin: 0;
         }
-        .button {
+        .country-button, .year-dropdown {
             position: absolute;
+            top: 10px;
             left: 10px;
             z-index: 1000;
             padding: 5px 10px;
@@ -21,94 +22,83 @@
             border-radius: 4px;
             cursor: pointer;
             font-size: 14px;
+            margin-right: 5px;
         }
-        .congo-button { top: 60px; }
-        .ghana-button { top: 100px; }
-        .dropdown { display: none; position: absolute; left: 80px; background-color: #f9f9f9; min-width: 160px; box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2); padding: 12px 16px; z-index: 1000; }
-        .show { display: block; }
+        .year-dropdown {
+            top: 60px;
+        }
     </style>
 </head>
 <body>
     <div id="map"></div>
     <script type="text/javascript">
-        // MapTiler hybrid base layer
-        const hybridBaseLayer = new ol.layer.Tile({
-            source: new ol.source.XYZ({
-                url: 'https://api.maptiler.com/maps/hybrid/{z}/{x}/{y}.jpg?key=0rXt9evmwC5e2EW3sauy',
-                attributions: '© MapTiler © OpenStreetMap contributors',
-                maxZoom: 20
-            })
-        });
-
-        // Create vector layer function with dynamic URL and boundary color
-        function createVectorLayer(url, boundaryColor) {
-            return new ol.layer.VectorTile({
-                declutter: true,
-                source: new olpmtiles.PMTilesVectorSource({ url }),
-                style: new ol.style.Style({
-                    stroke: new ol.style.Stroke({
-                        color: boundaryColor,
-                        width: 2,
-                    }),
-                    fill: new ol.style.Fill({
-                        color: 'rgba(0,0,0,0)', //polygon fill transparent
+        const map = new ol.Map({
+            target: 'map',
+            layers: [
+                new ol.layer.Tile({
+                    source: new ol.source.XYZ({
+                        url: 'https://api.maptiler.com/maps/hybrid/{z}/{x}/{y}.jpg?key=0rXt9evmwC5e2EW3sauy',
+                        attributions: '© MapTiler © OpenStreetMap contributors',
+                        maxZoom: 20
                     })
                 })
-            });
-        }
-
-        // Congo and Ghana vector layers with yellow boundaries
-        const congoVectorLayer = createVectorLayer("https://raw.githack.com/grace-du/crop-land-maps/main/congo.pmtiles",
-         'yellow');
-        const ghanaVectorLayer = createVectorLayer("https://github.com/Rahebe22/cropland/blob/main/ghana/aoi10_boundarymerge.pmtiles",
-         'yellow');
-
-        // OpenLayers map with base layer and initial vector layer
-        const map = new ol.Map({
-            layers: [hybridBaseLayer],
-            target: 'map',
+            ],
             view: new ol.View({
-                center: ol.proj.fromLonLat([0, 0]), // Updated to a neutral center
-                zoom: 2
+                center: ol.proj.fromLonLat([3.3, 7.85]),
+                zoom: 5
             })
         });
 
-        // Add buttons and dropdowns for Congo and Ghana
-        function addButtonAndDropdown(countryName, zoomFunction) {
-            // Create and append the button
-            const button = document.createElement('button');
-            button.innerHTML = countryName;
-            button.className = `${countryName.toLowerCase()}-button button`;
-            document.getElementById('map').appendChild(button);
+        // Define regions and their view parameters
+        const regions = {
+            'Congo': { center: ol.proj.fromLonLat([15.8277, -0.2280]), zoom: 7, pmtilesUrl: "https://raw.githack.com/grace-du/crop-land-maps/main/congo.pmtiles" },
+            'Ghana': { center: ol.proj.fromLonLat([-1.0232, 7.9465]), zoom: 7, pmtilesUrl: "https://github.com/Rahebe22/cropland/blob/main/ghana/aoi10_boundarymerge.pmtiles" }
+        };
 
-            // Create and append the dropdown
-            const dropdown = document.createElement('div');
-            dropdown.className = 'dropdown';
-            dropdown.innerHTML = `<strong>${countryName} Versions</strong><br>`;
-            ['Version 1', 'Version 2', 'Version 3'].forEach(version => {
-                dropdown.innerHTML += `<a href="#" onclick="changeLayer('${countryName.toLowerCase()}', '${version}');">${version}</a><br>`;
+        // Function to add vector layer based on selected country and year
+        function addVectorLayer(country, year) {
+            // Remove existing vector layer if any
+            const existingLayer = map.getLayers().getArray().find(layer => layer.get('id') === 'vectorLayer');
+            if (existingLayer) {
+                map.removeLayer(existingLayer);
+            }
+
+            const region = regions[country];
+            if (!region) return;
+
+            // Add new vector layer for selected country and year
+            const vectorLayer = new ol.layer.VectorTile({
+                source: new olpmtiles.PMTilesVectorSource({
+                    url: region.pmtilesUrl.replace('main', year) // Assuming the URL structure includes the year
+                }),
+                style: new ol.style.Style({
+                    stroke: new ol.style.Stroke({
+                        color: 'yellow',
+                        width: 2,
+                    })
+                }),
+                id: 'vectorLayer'
             });
-            document.getElementById('map').appendChild(dropdown);
+            map.addLayer(vectorLayer);
 
-            // Event listener to show dropdown
-            button.onclick = function() {
-                dropdown.classList.toggle("show");
-                zoomFunction();
-            };
+            // Zoom to the selected region
+            map.getView().animate({
+                center: region.center,
+                zoom: region.zoom,
+                duration: 1000 // Smooth transition animation (1 second)
+            });
         }
 
-        // Function placeholders for zooming to Congo and Ghana
-        function zoomToCongo() { /* Zoom to Congo */ }
-        function zoomToGhana() { /* Zoom to Ghana */ }
+        // Create dropdowns for selecting country, version, and year
+        const countrySelect = document.createElement('select');
+        countrySelect.className = 'country-button';
+        Object.keys(regions).forEach(country => {
+            const option = document.createElement('option');
+            option.value = country;
+            option.text = country;
+            countrySelect.appendChild(option);
+        });
 
-        addButtonAndDropdown('Congo', zoomToCongo);
-        addButtonAndDropdown('Ghana', zoomToGhana);
-
-        // Placeholder function to change the layer based on selection
-        window.changeLayer = function(country, version) {
-            console.log(`${country} ${version} selected`);
-            // Implement layer switching logic here
-        };
-    </script>
-</body>
-</html>
+        const yearSelect = document.createElement('select');
+        yearSelect.className = 'year-dropdown';
+        ['
