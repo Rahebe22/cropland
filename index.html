@@ -54,17 +54,16 @@
                 center: ol.proj.fromLonLat([15.8277, -0.2280]),
                 zoom: 7,
                 pmtilesUrls: {
-                    '2022': "https://raw.githack.com/grace-du/crop-land-maps/main/congo.pmtiles",
-                    
+                    '2022': "https://raw.githack.com/grace-du/crop-land-maps/main/congo.pmtiles",                    
                 }
             },
             'Ghana': {
                 center: ol.proj.fromLonLat([-1.0232, 7.9465]),
                 zoom: 7,
                 pmtilesUrls: {
-                    'year_1': "https://github.com/Rahebe22/cropland/blob/6fe39494316f31c0c50dbb6acc31f1dfcafb38b7/ghana/aoi10_boundarymerge.pmtiles",
-                    'year_2': "https://example.com/ghana/year_2.pmtiles",
-                    'year_3': "https://example.com/ghana/year_3.pmtiles",
+                    '2018': "https://github.com/Rahebe22/cropland/blob/6fe39494316f31c0c50dbb6acc31f1dfcafb38b7/ghana/aoi10_boundarymerge.pmtiles",
+                    '2019': "https://example.com/ghana/year_2.pmtiles",
+                    '2022': "https://example.com/ghana/year_3.pmtiles",
                 }
             }
         };
@@ -112,7 +111,7 @@
 
         const yearSelect = document.createElement('select');
         yearSelect.className = 'year-dropdown';
-        ['year_1', 'year_2', 'year_3'].forEach(year => {
+        ['2018', '2019', '2022'].forEach(year => {
             const option = document.createElement('option');
             option.value = year;
             option.text = year;
@@ -125,8 +124,8 @@
         document.getElementById('map').appendChild(countrySelect);
         document.getElementById('map').appendChild(yearSelect);
 
-        // Initially load Congo vector layer for year_1
-        addVectorLayer('Congo', 'year_1');
+        // Initially load Congo vector layer for 2022
+        addVectorLayer('Congo', '2022');
     </script>
 </body>
 </html>
