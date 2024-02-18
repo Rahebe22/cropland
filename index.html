@@ -51,13 +51,55 @@
             })
         });
 
-        // Initialize version and year dropdowns without options
+        const regions = {
+            'Congo': {
+                center: ol.proj.fromLonLat([15.8277, -0.2280]),
+                zoom: 7,
+                versions: {
+                    'v1': {
+                        '2018': "https://example.com/ghana/v1/2018.pmtiles",
+                        '2019': "https://example.com/ghana/v1/2019.pmtiles",
+                        '2022': "https://raw.githack.com/grace-du/crop-land-maps/main/congo.pmtiles"
+                    },
+                    'v2': {
+                        '2018': "https://example.com/ghana/v1/2018.pmtiles",
+                        '2019': "https://example.com/ghana/v1/2019.pmtiles",
+                        '2022': "https://example.com/congo/v2/2022.pmtiles"
+                    }
+                }
+            },
+            'Ghana': {
+                center: ol.proj.fromLonLat([-1.0232, 7.9465]),
+                zoom: 7,
+                versions: {
+                    'v1': {
+                        '2018': "https://example.com/ghana/v1/2018.pmtiles",
+                        '2019': "https://example.com/ghana/v1/2019.pmtiles",
+                        '2022': "https://example.com/ghana/v1/2022.pmtiles"
+                    },
+                    'v2': {
+                        '2018': "https://example.com/ghana/v2/2018.pmtiles",
+                        '2019': "https://example.com/ghana/v2/2019.pmtiles",
+                        '2022': "https://example.com/ghana/v2/2022.pmtiles"
+                    }
+                }
+            }
+        };
+
+        const countrySelect = document.createElement('select');
+        countrySelect.className = 'country-button';
+        Object.keys(regions).forEach(country => {
+            let option = document.createElement('option');
+            option.value = country;
+            option.text = country;
+            countrySelect.appendChild(option);
+        });
+
         const versionSelect = document.createElement('select');
         versionSelect.className = 'version-dropdown';
         const yearSelect = document.createElement('select');
         yearSelect.className = 'year-dropdown';
 
-        // Function to update the version dropdown based on the selected country
         function updateVersionOptions(country) {
             versionSelect.innerHTML = ''; // Clear existing options
             Object.keys(regions[country].versions).forEach(version => {
@@ -66,10 +108,9 @@
                 option.text = version;
                 versionSelect.appendChild(option);
             });
-            updateYearOptions(country, versionSelect.value); // Update years for the initial version
+            versionSelect.dispatchEvent(new Event('change')); // Trigger change to load years
         }
 
-        // Function to update the year dropdown based on the selected country and version
         function updateYearOptions(country, version) {
             yearSelect.innerHTML = ''; // Clear existing options
             Object.keys(regions[country].versions[version]).forEach(year => {
@@ -80,7 +121,6 @@
             });
         }
 
-        // Modify the addVectorLayer function to include version in the URL selection
         function addVectorLayer(country, version, year) {
             const existingLayer = map.getLayers().getArray().find(layer => layer.get('id') === 'vectorLayer');
             if (existingLayer) {
@@ -88,8 +128,6 @@
             }
 
             const url = regions[country].versions[version][year];
-            if (!url) return;
-
             const vectorLayer = new ol.layer.VectorTile({
                 source: new olpmtiles.PMTilesVectorSource({url: url}),
                 style: new ol.style.Style({
@@ -109,61 +147,17 @@
             });
         }
 
-        // Assuming the structure of regions is updated to include versions
-        const regions = {
-            'Congo': {
-                center: ol.proj.fromLonLat([15.8277, -0.2280]),
-                zoom: 7,
-                versions: {
-                    'v1': {
-                        '2018': "https://example.com/ghana/v1/2018.pmtiles",
-                        '2019': "https://example.com/ghana/v1/2019.pmtiles",
-                        '2022': "https://raw.githack.com/grace-du/crop-land-maps/main/congo.pmtiles"
-                    }
-                }
-            },
-            'Ghana': {
-                center: ol.proj.fromLonLat([-1.0232, 7.9465]),
-                zoom: 7,
-                versions: {
-                    'v1': {
-                        '2018': "https://example.com/ghana/v1/2018.pmtiles",
-                        '2019': "https://example.com/ghana/v1/2019.pmtiles",
-                        '2022': "https://example.com/ghana/v1/2022.pmtiles"
-                    }
-                }
-            }
-        };
+        countrySelect.onchange = () => updateVersionOptions(countrySelect.value);
+        versionSelect.onchange = () => updateYearOptions(countrySelect.value, versionSelect.value);
+        yearSelect.onchange = () => addVectorLayer(countrySelect.value, versionSelect.value, yearSelect.value);
 
-        // Setup country select dropdown
-        const countrySelect = document.createElement('select');
-        countrySelect.className = 'country-button';
-        Object.keys(regions).forEach(country => {
-            let option = document.createElement('option');
-            option.value = country;
-            option.text = country;
-            countrySelect.appendChild(option);
-        });
-
-        // Add event listeners to dropdowns
-        countrySelect.onchange = () => {
-            updateVersionOptions(countrySelect.value);
-        };
-        versionSelect.onchange = () => {
-            updateYearOptions(countrySelect.value, versionSelect.value);
-        };
-        yearSelect.onchange = () => {
-            addVectorLayer(countrySelect.value, versionSelect.value, yearSelect.value);
-        };
-
-        // Append dropdowns to the DOM
         document.getElementById('map').appendChild(countrySelect);
         document.getElementById('map').appendChild(versionSelect);
         document.getElementById('map').appendChild(yearSelect);
 
-        // Initialize the map with the first country's first version and year
+        // Initialize the map with the first country's first version and year on window load
         window.onload = () => {
-            countrySelect.onchange();
+            countrySelect.dispatchEvent(new Event('change'));
         };
     </script>
 </body>
