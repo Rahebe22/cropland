@@ -11,10 +11,10 @@
             height: 100vh;
             margin: 0;
         }
-        .country-button, .year-dropdown {
+        .country-button, .version-dropdown, .year-dropdown {
             position: absolute;
-            top: 10px; /* Adjust this for both dropdowns if needed */
-            right: 10px; /* Positions the dropdowns to the right */
+            top: 10px;
+            right: 10px;
             z-index: 1000;
             padding: 5px 10px;
             background-color: white;
@@ -23,8 +23,11 @@
             cursor: pointer;
             font-size: 14px;
         }
+        .version-dropdown {
+            top: 60px; /* Adjust position for version dropdown */
+        }
         .year-dropdown {
-            top: 60px; /* Positions the year dropdown below the country dropdown */
+            top: 110px; /* Adjust position for year dropdown */
         }
     </style>
 </head>
@@ -48,40 +51,47 @@
             })
         });
 
-        // Update the regions definition to include URLs for different years
-        const regions = {
-            'Congo': {
-                center: ol.proj.fromLonLat([15.8277, -0.2280]),
-                zoom: 7,
-                pmtilesUrls: {
-                    '2022': "https://raw.githack.com/grace-du/crop-land-maps/main/congo.pmtiles",                    
-                }
-            },
-            'Ghana': {
-                center: ol.proj.fromLonLat([-1.0232, 7.9465]),
-                zoom: 7,
-                pmtilesUrls: {
-                    '2018': "https://github.com/Rahebe22/cropland/blob/6fe39494316f31c0c50dbb6acc31f1dfcafb38b7/ghana/aoi10_boundarymerge.pmtiles",
-                    '2019': "https://example.com/ghana/year_2.pmtiles",
-                    '2022': "https://example.com/ghana/year_3.pmtiles",
-                }
-            }
-        };
+        // Initialize version and year dropdowns without options
+        const versionSelect = document.createElement('select');
+        versionSelect.className = 'version-dropdown';
+        const yearSelect = document.createElement('select');
+        yearSelect.className = 'year-dropdown';
 
-        // Modify the addVectorLayer function to dynamically load the PMTiles
-        function addVectorLayer(country, year) {
+        // Function to update the version dropdown based on the selected country
+        function updateVersionOptions(country) {
+            versionSelect.innerHTML = ''; // Clear existing options
+            Object.keys(regions[country].versions).forEach(version => {
+                let option = document.createElement('option');
+                option.value = version;
+                option.text = version;
+                versionSelect.appendChild(option);
+            });
+            updateYearOptions(country, versionSelect.value); // Update years for the initial version
+        }
+
+        // Function to update the year dropdown based on the selected country and version
+        function updateYearOptions(country, version) {
+            yearSelect.innerHTML = ''; // Clear existing options
+            Object.keys(regions[country].versions[version]).forEach(year => {
+                let option = document.createElement('option');
+                option.value = year;
+                option.text = year;
+                yearSelect.appendChild(option);
+            });
+        }
+
+        // Modify the addVectorLayer function to include version in the URL selection
+        function addVectorLayer(country, version, year) {
             const existingLayer = map.getLayers().getArray().find(layer => layer.get('id') === 'vectorLayer');
             if (existingLayer) {
                 map.removeLayer(existingLayer);
             }
 
-            const region = regions[country];
-            if (!region || !region.pmtilesUrls[year]) return;
+            const url = regions[country].versions[version][year];
+            if (!url) return;
 
             const vectorLayer = new ol.layer.VectorTile({
-                source: new olpmtiles.PMTilesVectorSource({
-                    url: region.pmtilesUrls[year]
-                }),
+                source: new olpmtiles.PMTilesVectorSource({url: url}),
                 style: new ol.style.Style({
                     stroke: new ol.style.Stroke({
                         color: 'yellow',
@@ -93,39 +103,66 @@
             map.addLayer(vectorLayer);
 
             map.getView().animate({
-                center: region.center,
-                zoom: region.zoom,
+                center: regions[country].center,
+                zoom: regions[country].zoom,
                 duration: 1000
             });
         }
 
-        // Dropdowns setup remains the same
+        // Assuming the structure of regions is updated to include versions
+        const regions = {
+            'Congo': {
+                center: ol.proj.fromLonLat([15.8277, -0.2280]),
+                zoom: 7,
+                versions: {
+                    'v1': {
+                        '2022': "https://example.com/congo/v1/2022.pmtiles"
+                    }
+                }
+            },
+            'Ghana': {
+                center: ol.proj.fromLonLat([-1.0232, 7.9465]),
+                zoom: 7,
+                versions: {
+                    'v1': {
+                        '2018': "https://example.com/ghana/v1/2018.pmtiles",
+                        '2019': "https://example.com/ghana/v1/2019.pmtiles",
+                        '2022': "https://example.com/ghana/v1/2022.pmtiles"
+                    }
+                }
+            }
+        };
+
+        // Setup country select dropdown
         const countrySelect = document.createElement('select');
         countrySelect.className = 'country-button';
         Object.keys(regions).forEach(country => {
-            const option = document.createElement('option');
+            let option = document.createElement('option');
             option.value = country;
             option.text = country;
             countrySelect.appendChild(option);
         });
 
-        const yearSelect = document.createElement('select');
-        yearSelect.className = 'year-dropdown';
-        ['2018', '2019', '2022'].forEach(year => {
-            const option = document.createElement('option');
-            option.value = year;
-            option.text = year;
-            yearSelect.appendChild(option);
-        });
+        // Add event listeners to dropdowns
+        countrySelect.onchange = () => {
+            updateVersionOptions(countrySelect.value);
+        };
+        versionSelect.onchange = () => {
+            updateYearOptions(countrySelect.value, versionSelect.value);
+        };
+        yearSelect.onchange = () => {
+            addVectorLayer(countrySelect.value, versionSelect.value, yearSelect.value);
+        };
 
-        countrySelect.onchange = () => addVectorLayer(countrySelect.value, yearSelect.value);
-        yearSelect.onchange = () => addVectorLayer(countrySelect.value, yearSelect.value);
-
+        // Append dropdowns to the DOM
         document.getElementById('map').appendChild(countrySelect);
+        document.getElementById('map').appendChild(versionSelect);
         document.getElementById('map').appendChild(yearSelect);
 
-        // Initially load Congo vector layer for 2022
-        addVectorLayer('Congo', '2022');
+        // Initialize the map with the first country's first version and year
+        window.onload = () => {
+            countrySelect.onchange();
+        };
     </script>
 </body>
 </html>
